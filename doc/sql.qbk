@@ -1,0 +1,785 @@
+[library Boost.SQL
+ [quickbook 1.3]
+ [authors [Pfeifer, Daniel] ]
+ [copyright 2008 Daniel Pfeifer]
+ [purpose
+  Prototyp eines Vorschlags für die Aufnahme in Boost:
+  Eine portable C++ Bibliothek für den synchronen und asynchronen Zugriff
+  auf Datenbanken mit Hilfe von "prepared statements".
+ ]
+ [id sql]
+ [dirname sql]
+ [license
+  Distributed under the Boost Software License, Version 1.0.[br]
+  (See accompanying file LICENSE_1_0.txt or copy at
+  [@http://www.boost.org/LICENSE_1_0.txt])
+ ]
+]
+
+[def __MYSQL__
+ [@http://www.mysql.com/ MySQL]
+ ([@http://dev.mysql.com/doc/refman/5.0/en/c.html API])
+]
+
+[def __POSTGRES__
+ [@http://www.postgresql.org/ PostgreSQL]
+ ([@http://www.postgresql.org/docs/8.3/static/libpq.html API])
+]
+
+[def __SQLITE__
+ [@http://www.sqlite.org/ SQLite3]
+ ([@http://www.sqlite.org/c3ref/intro.html API])
+]
+  
+[def __IBASE__
+ [@http://www.firebirdsql.org/ Firebird]\/InterBase 6.0
+ ([@http://www.ibphoenix.com/downloads/60ApiGuide.zip API])
+]
+
+[def __ODBC__
+ [@http://wikipedia.org/wiki/ODBC ODBC]
+ ([@http://msdn.microsoft.com/en-us/library/ms714562(VS.85).aspx API])
+]
+
+[def __ORACLE__
+ [@http://www.oracle.com/technology/tech/oci/index.html Oracle Call Interface]
+ ([@http://download.oracle.com/docs/cd/B14117_01/appdev.101/b10779/toc.htm API])
+]
+
+[def __DTL__
+ [@http://dtemplatelib.sourceforge.net/index.htm [*Database Template Library]]
+]
+[def __SOCI__ [@http://soci.sourceforge.net/ [*SOCI]]]
+[def __QTSQL__ [@http://doc.trolltech.com/4.4/qtsql.html [*QtSQL]]]
+
+[section:intro Einleitung]
+
+SQL (Structured Query Language) ist eine von ANSI und ISO standardisierte
+Datenbanksprache zur Definition, Abfrage und Manipulation von Daten in
+relationalen Datenbanken. Die Sprache SQL alleine ermöglicht nicht die
+Realisierung von beliebigen Computerprogrammen; sie ist nicht
+Turing-vollständig. Um SQL mit anderen Programmiersprachen zu kombinieren, und
+damit eine Programmierung im engeren Sinne zu ermöglichen, bieten
+Datenbanksysteme eine Programmierschnittstelle (API) für die Sprache C. Einige
+Datenbanksysteme bieten zusätzliche Schnittstellen für beispielsweise C++, Java,
+Python, ODBC und Embedded SQL. Diese basieren stets auf der entsprechenden
+C-API.
+
+Abgesehen von den hauseigenen C++-Schnittstellen der einzelnen Datenbanksysteme
+gibt es mehrere Bibliotheken für C++, welche die C-API verschiedener Datenbanken
+abstrahieren und somit eine einheitliche C++-Schnittstelle für mehrere
+Datenbanken bieten. Besonders erwähnenswert sind die drei folgenden
+Bibliotheken:
+
+* Die __DTL__ stellt ODBC-Datensätze als STL-kompatible Container dar und bietet
+  STL-konforme Iteratoren. Die Funktionen `insert()`, `erase()` und `replace()`
+  modifizieren die Inhalte der Datenbank direkt.
+* __SOCI__ bietet durch das Überladen von `operator<<()` und `operator,()` die
+  Illusion von eingebettetem SQL in C++.
+* __QTSQL__ ist die SQL-Komponente aus dem Qt-Framework. Sie ist eine rein
+  objektorientierte Bibliothek und bietet volle Polymorphie zur Laufzeit.
+
+In diesem Projekt wird der Entwurf einer weiteren SQL-Bibliothek für C++
+vorgestellt. Die Schwerpunkte dieses Entwurfes sind [*Performanz],
+[*Benutzbarkeit] und [*Sicherheit].
+[/Dieser Entwurf konzentriert sich auf die Schwerpunkte Performanz, Benutzbarkeit und Sicherheit.]
+
+[variablelist
+ [[Performanz]
+  [Der Datenbankserver ist sicherlich die langsamste Komponente in jedem System.
+   Die Schnittstelle zwischen Anwenderprogramm und Server kann an dieser
+   Tatsache nichts ändern. Das Mindeste, was eine Schnittstelle bieten kann, ist
+   eine Lösung, bei der die schnellen Komponenten nicht von langsamen
+   Komponenten ausgebremst werden.
+  ]
+ ]
+ [[Benutzbarkeit]
+  [Die Programmierschnittstellen von verschiedenen Datenbanken sind sehr
+   unterschiedlich. Eine einheitliche Anbindung erleichtert das Arbeiten mit
+   verschiedenen Datenbanken gleichzeitig. Aber auch diese Abstraktion sollte
+   nicht unnötig kompliziert sein. 
+  ]
+ ]
+ [[Sicherheit]
+  [C++ ist eine typensichere Programmiersprache. Diese Sicherheit ist in
+   SQL-Zeichenketten nicht gegeben: Sonderzeichen können gezielt für
+   SQL-Injections genutzt werden. Die Bibliothek soll daher die Vorteile von C++
+   ausschöpfen.
+  ]
+ ]
+]
+
+Die Umsetzung dieser Vorgaben geschieht mit Hilfe folgender Techniken. 
+
+[variablelist
+ [[[link sql.boost Boost C++ Bibliotheken]]
+  [Die hier vorgestellte Bibliothek verwendet mehrere Bibliotheken aus dem
+   Boost-Projekt. Es ist geplant, die Bibliothek für die Aufnahme in Boost
+   vorzuschlagen. Sie wird daher im Weiteren Boost.SQL genannt.
+  ]
+ ]
+ [[Template-Metaprogrammierung]
+  [Jegliche Daten, die mit dem Datenbanksystem ausgetauscht werden, werden im
+   Anwenderprogramm in C++-Typen abgelegt. Diese Typen sind zur Kompilierzeit
+   bekannt. Die vorgestellte Bibliothek nutzt Template-Metaprogrammierung um
+   Informationen, die zur Kompilierzeit vorliegen, bereits beim Kompiliervorgang
+   zu nutzen.
+  ]
+ ]
+ [[[link sql.async Synchrone und asynchrone Funktionen]]
+  [Datenbankzugriffe können sehr viel Zeit in Anspruch nehmen. Für
+   Computeranwendungen, die neben dem reinen Datenbankzugriff noch andere
+   Aufgaben erfüllen (wie beispielsweise eine grafische Bedienoberfläche
+   anzuzeigen), ist es nicht akzeptabel, bis zur Antwort der Anfrage die
+   Anwendung zu blockieren.
+
+   Es ist naheliegend, blockierende Anfragen in einem eigenen Thread aufzurufen,
+   um nicht die gesamte Anwendung zu blockieren. Eine performantere Lösung ist
+   es, zu prüfen ob am entsprechenden Netzwerk-Socket Daten zum lesen bereit
+   stehen.
+
+   Die vorgestellte Bibliothek stellt neben den synchronen Funktionen auch
+   asynchrone Funktionen bereit, die den Ablauf der Anwendung nicht blockieren.
+   Es ist abhängig vom Datenbanksystem, ob dabei der Netzwerk-Socket geprüft,
+   oder ob die zugehörige synchrone Funktion in einem Worker-Thread aufgerufen
+   wird. 
+  ]
+ ]
+ [[Vorbereitete Anweisungen]
+  [Der klassische Weg der Datenabfrage mit SQL ist über Zeichenketten, die vom
+   Datenbankserver interpretiert werden. Soll eine Anweisungen mehrere Male
+   ausgeführt werden, bieten Datenbanksysteme ein effizentes Mittel, bei dem die
+   Anweisung nur ein einziges Mal geparst werden muss.
+
+   Bei sogenannten Prepared Statements können Platzhalter verwendet werden, an
+   deren Stelle bei der Ausführung die Variablen eingefügt werden. Diese
+   Variablen werden an das Datenbanksystem binär übertragen, woraus sich ein
+   weiterer Geschwindigkeitsvorteil ergibt.
+
+   Der Typ dieser Variablen wird auf Gültigkeit geprüft bevor diese verarbeitet
+   werden. Auf diese Weise werden SQL-Injections verhindert.
+  ]
+ ]
+]
+
+[$exploits_of_a_mom.png]
+["Exploits of a Mom] © by Randall Munroe (CC-BY-NC-2.5), [@http://xkcd.com/327]
+[endsect]
+
+[section:boost Boost C++ Bibliotheken]
+[@http://www.boost.org Boost] bezeichnet sowohl eine Sammlung
+plattformunabhängiger und quelloffener Bibliotheken für C++ als auch die
+Gemeinschaft talentierter Programmierer, welche als Entwickler und Betreuer
+hinter diesen Bibliotheken stehen.
+
+Was Boost von anderen C++ Bibliotheken und Gemeinschaften um die
+Programmiersprache unterscheidet, ist das enge und einflussreiche Verhältnis zum
+C++-Standardisierungskomitee. Boost wurde von Komiteemitgliedern des
+C++-Standarts gegründet und ist als ['Spielwiese] für Erweiterungen der
+C++-Programmiersprache gedacht. Von den 14 Bibliotheken, welche durch den
+['Ersten Technischen Report] in C++ eingeführt wurden, stammen zehn von
+Boost-Bibliotheken ab.
+
+Die Qualität der Boost-Bibliotheken wird durch die hohen Anforderungen für die
+Aufnahme sichergestellt. Um in die Sammlung der Boost-Bibliotheken aufgenommen
+zu werden, muss eine Bibliothek
+
+* unter mindestens zwei verschiedenen Kompilern kompilierbar sein (um die
+  Portabilität zu demonstrieren),
+* die uneingeschränkte kommerzielle und nicht-kommerzielle Nutzung erlauben
+  (bevorzugt wird die [@http://www.boost.org/LICENSE_1_0.txt Boost Software
+  License]) und
+* einen öffentlichen Review-Prozess durchlaufen.
+
+Im Review-Prozess wird jeder dazu ermutigt, die Bibliothek und die zugehörige
+Dokumentation zu evaluieren und für oder gegen eine Aufnahme zu stimmen. Der
+Review-Manager sammelt die Ergebnisse und entscheidet, ob die Bibliothek
+angenommen, bedingt angenommen oder abgelehnt wird.
+
+Das Ziel der vorliegenden Bibliothek ist die Aufnahme in Boost. Sie steht unter
+der [@http://www.boost.org/LICENSE_1_0.txt Boost Software License] und verwendet
+die Werkzeugkette von Boost zum erstellen von Tests und Dokumentation. Sie hängt
+zudem von weiteren Boost Bibliotheken ab.
+
+[section:mpl Boost.MPL]
+Die Boost Metaprogramming Library ist ein Template-Metaprogramming-Framework von
+Algorithmen zur Kompilierzeit, Sequenzen und Metafunktionen. Die Bibliothek ist
+eine der umfangreichsten Boost-Bibliotheken. Sie wird im Buch
+[@http://www.awprofessional.com/titles/0321227255 C++ Template Metaprogramming:
+Concepts, Tools, and Techniques from Boost and Beyond] von David Abrahams und
+Aleksey Gurtovoy, den Entwicklern von Boost.MPL ausfühlich beschrieben.
+
+Boost.MPL wird von Boost.SQL intern verwendet. Man muss die MPL Bibliothek nicht
+kennen, um die SQL Bibliothek verwenden zu können.
+[endsect]
+
+[section:preprocessor Boost.Preprocessor]
+Boost.Preprocessor bietet Makros zur Metaprogrammierung mittels des
+Präprozessors für Repetitionen und Rekursion.
+
+Wie Boost.MPL wird sie nur intern verwendet.
+[endsect]
+
+[section:fusion Boost.Fusion]
+Fusion ist eine Bibliothek für das Arbeiten mit heterogenen Sammlungen von
+Daten, allgemein als Tupels bezeichnet. Es werden Container-Klassen zur
+Verfügung gestellt (vector, list, set und map), sowie eine View-Klassen, die
+eine verwandelte Präsentation ihrer zugrunde liegenden Daten liefern. Kollektiv
+werden Container und Views als Sequenzen bezeichnet. Fusion hat eine Reihe von
+Algorithmen, welche über diese Sequenzen operieren. Zudem sind Fusion-Sequenzen
+kompatibel mit Algorithmen der Boost.MPL. Der Name ["Fusion] deutet darauf hin,
+daß diese Bibliothek Kompilierzeit-Metaprogrammierung mit
+Laufzeit-Programmierung verbindet.
+
+Parameter und Ergebnisse von Datenbankabfragen können von Boost.SQL als
+Fusion-Sequenzen repräsentiert werden. Mit Hilfe des Makros
+`BOOST_FUSION_ADAPT_STRUCT` können jedoch eigene Strukturen als gültige
+Fusion-Sequenzen deklariert werden, was die nötigen Vorkenntnisse der Fusion
+Bibliothek auf ein Minimum reduziert.
+[endsect]
+
+[section:enable_if Boost.Enable_If]
+Das SFINAE-Prinzip (Substitution Failure Is Not An Error) bestimmt, daß wenn
+während der Instantiierung eines Funktion-Templates ein ungültiger Argument-
+oder Rückgabewert geformt wird, die Instantiierung aus der Zerlegung der
+Überladungen entfernt wird anstatt einen Fehler zu verursachen. Das Prinzip ist
+wichtig, da andernfalls templatisiert überladene Funktionen nicht immer korrekt
+aufgelöst werden können. 
+
+Die Bibliothek Boost.Enable_If macht sich dieses Prinzip zu Nutze und bietet die
+Möglichkeit, Argument- und Rückgabewerte zu invalidieren, um bestimmte
+Überladungen gezielt zu deaktivieren.
+[endsect]
+
+[section:date_time Boost.Date_Time]
+Date_Time ist eine Sammlung von Bibliotheken für die Berechnung von Zeiten und
+Zeitintervallen. Von Boost.SQL werden lediglich die Typen `gregorian::date`,
+`posix_time::time_duration` und `posix_time::ptime` verwendet, um ein
+C++-Äquivalent der SQL-Typen DATE, TIME und DATETIME zu repräsentieren. Ein
+Programm, das die Boost.SQL Bibliothek verwendet, muss nicht gegen die
+Boost.Date_Time Bibliothek gelinkt weden.
+[endsect]
+
+[section:asio Boost.Asio]
+Die meisten Programmen interagieren mit der Außenwelt in irgendeiner Form, sei
+es über eine Datei, ein Netzwerk, ein serielles Kabel, oder die Konsole.
+Manchmal nehmen individuelle I/O-Operationen eine lange Zeit in Anspruch.
+
+Boost.Asio liefert Lösungen zur Verwaltung dieser lange laufenden Operationen,
+ohne Nebenläufigkeit auf Basis mehrerer Threads und expliziter Sperren
+vorrauszusetzen.
+
+Die asynchronen Funktionen von Boost.SQL sind auf der Basis von Boost.Asio
+implementiert. Boost.SQL fügt sich somit in das Konzept von Boost.Asio ein.
+[endsect]
+
+[section:bind Boost.Bind]
+Boost.Bind ist eine Verallgemeinerung der Standardfunktionen `std::bind1st` und
+`std::bind2nd`. Es unterstützt benutzerdefinierte Funktionsobjekte, Funktionen,
+Funktionszeiger und Member-Funktionszeiger. Als Argumente können gezielt Werte
+gebunden, oder Argumente beliebiger Position weitergeleitet werden.
+
+Boost.SQL verwendet Boost.Bind um die Callback-Handler der asynchronen
+Funktionen an Funktionsobjekte zu binden.
+[endsect]
+
+[section:optional Boost.Optional]
+Felder aller Typen in einer Datenbank können NULL sein. Es ist hervorzuheben,
+daß sich der Wert NULL von dem integrierten Wert 0 unterscheidet und auch nicht
+einer leeren Zeichenkette entspricht. Stattdessen wird zu jedem Feld
+gespeichert, ob ein Wert (nicht NULL) oder ob kein Wert eingetragen ist (NULL).
+Die Information, ob ein Wert gültig ist, kann in C++ beispielsweise durch
+`std::pair<T, bool>` angegeben werden. Eine elegantere Lösung bietet die
+Bibliothek Boost.Optional, die daher von Boost.SQL unterstützt wird.
+
+Ein Feld, das NULL sein kann, sollte daher mit `boost::optional<T>` abgefragt
+werden.
+[endsect]
+[endsect]
+
+[section:concept Konzept]
+Boost.SQL abstrahiert die folgenden Programmierschnittstellen:
+
+* __IBASE__
+* __MYSQL__
+* __ODBC__
+* __ORACLE__
+* __POSTGRES__
+* __SQLITE__
+
+Die Schnittstellen der Datenbanksysteme werden untersucht, um eine Basis für
+eine einheitliche Abstraktion zu finden. 
+
+[section IBase/Firebird]
+Die Bibliothek muss nicht initialisiert werden. Es muss jedoch ein Statusvector
+(`ISC_STATUS_ARRAY`) angelegt werden, der jedem Funktionsaufruf mit übergeben
+wird. In diesen Statusvector werden Informationen abgelegt, wenn Fehler
+auftreten.
+
+Übergabe- und Ergebnisparameter werden über sogenannte `XSQLDA` definiert und
+der API übergeben.
+[endsect]
+
+[section MySQL]
+Vor jedem Funktionsaufruf muss die Bibliothek mittels `mysql_library_init()`
+initialisiert werden. Wird MySQL von mehreren Threads aus genutzt, muss in jedem 
+Thread `mysql_thread_init()` aufgerufen werden. Deinitialisiert wird die
+Bibliothek durch `mysql_library_end()`.
+
+Parameter für Prepared Statements werden in `MYSQL_BIND` definiert.
+[endsect]
+
+[section ODBC]
+Es muss ein Umgebungs-`SQLHANDLE` initialisiert werden, um
+Verbindungs-`SQLHANDLE`s zu initialisieren. Über das Verbindungs-`SQLHANDLE`
+werden schliesslich `SQLHANDLE`s für die Anweisungen initialisert.
+
+Variable Parameter werden über Funktionsaufrufe von `SQLBindParameter()`an das
+Verbindungshandle gebunden.
+[endsect]
+
+[section ORACLE]
+Für die Umgebung muss ein Handle angelegt werden um die Bibliothek zu
+initialisieren. Platzhalter werden namentlich gekennzeichnet (Bsp: [":name]).
+Parameter können aber auch nach Position gebunden werden.
+[endsect]
+
+[section PostgreSQL]
+Die Bibliothek muss nicht initialisiert werden. Die API stellt keine Abstraktion
+für Anweisungen bereit, es können jedoch Anweisungen vorbereitet werden, wobei
+diese mit einer eindeutigen Zeichenkette identifiziert werden. Von variablen
+Parametern werden Typ-Identifizierer (hier `Oid` genannt), Wert und Länge in
+einzelne Vektoren geschrieben. Der `Oid`-Vektor ist nur für das Vorbereiten der
+Anweisung relevant, Wert und Länge für die eigentliche Ausführung.
+
+PostgreSQL bietet von Haus aus Unterstützung für asynchrone Programmierung.
+Mittels `PQsocket()` kann der Socket einer Netzwerk-Verbindung zum
+Datenbankserver ermittelt werden. Dies ermöglicht, durch Funktionen des
+Betriebssystem (`epoll()`, `select()` oder `kqueue()`) zu prüfen, ob Daten am
+Socket bereitstehen, bevor weitere Funktionen der PostgreSQL-Bibliothek
+aufgerufen werden, die den Programmablauf blockieren würden, bis der
+Netzwerk-Socket bereit ist.
+
+Die Ergebnismenge wird auch bei Vorbereiteten Anweisungen über `PGresult*`
+abgerufen. Hierbei ist PostgreSQL eine Ausnahme, da bei allen anderen
+Bibliotheken die Ergebnismenge über das Anweisungshandle abgerufen wird.
+[endsect]
+
+[section SQLite3]
+Die Bibliothek muss nicht initialisiert werden. Das Binden von Parametern und
+Abrufen der Ergebnisse passiert über Funktionsaufrufe, die sich jedoch nach Typ
+unterscheiden (Bsp: `sqlite3_bind_double()` um Fließkommawerte mit doppelter
+Präzision zu binden).
+[endsect]
+
+
+[section Abstraktion]
+Nach einer Untersuchung der Datenbank-Bibliotheken wird festgelegt, jede C-API
+durch drei Klassen zu abstrahieren. Diese Abstraktion der Basisfunktionalität
+wird in einer höheren Programmebene weiter abstrahiert.
+
+[variablelist
+ [[Service]
+  [Ein Objekt dieser Klasse wird für jedes Backend, von dem eine Verbindung
+   geöffnet wird, erstellt. Weitere Verbindungen nutzen dasselbe Service-Objekt,
+   sodass für jedes Backend maximal ein Service-Objekt erzeugt wird. Dieses
+   Service-Objekt initialisiert die Bibliothek, stellt Umgebungshandles bereit
+   und verwaltet Worker-Threads für asynchrone Funktionen.
+  ]
+ ]
+ [[Connection]
+  [Diese Klasse abstrahiert eine Verbindung zu einer Datenbank. Über diese
+   Klasse können Informationen über die Verbindung (beispielsweise die
+   Versionsnummer) abgefragt, Transaktionen gestartet und beendet, sowie
+   Anweisungen initialisiert werden.
+  ]
+ ]
+ [[Statement]
+  [Eine Anweisung wird initialisiert mit einer Zeichenkette. Vor der ersten
+   Ausführung einer Anweisung wird diese Vorbereitet und dabei auf Gültigkeit
+   geprüft.
+
+   Eine Anweisung abstrahiert zugleich ihr Ergebnis. Gewünscht wäre zwar, eine
+   zusätzliche Klasse als Abstraktion der Ergebnismenge bereitzustellen und
+   diese Klasse mit Containern der STL kompatibel zu machen, allerdings ist
+   PostgreSQL das einzige Backend, das diesen Ansatz unterstützt.
+  ]
+ ]
+]
+
+Welche Typen durch diese drei Klassen abstrahiert werden, ist in folgender
+Tabelle aufgeführt:
+
+[table
+ [[API][Service][Connection][Statement][Result]]
+ [[IBase][][`isc_db_handle`][`isc_stmt_handle`][]]
+ [[MySQL][`my_init()`][`MYSQL*`][`MYSQL_STMT*`][]]
+ [[ODBC][`SQLHANDLE`][`SQLHANDLE`][`SQLHANDLE`][]]
+ [[ORACLE][`OCIEnv*`][`OCISvcCtx*`][`OCIStmt*`][]]
+ [[PostgreSQL][][`PGconn*`][`char*`][`PGresult*`]]
+ [[SQLite3][][`sqlite3*`][`sqlite3_stmt*`][]]
+]
+
+[endsect]
+[endsect]
+
+[section Vorbereitete Anweisungen]
+Um eine Anweisungen in Boost.SQL zu verwenden, muss ein Objekt der Klasse
+`statement` (Bsp: `boost::sql::mysql::statement`) verwendet werden. Bei der
+Deklaration werden der Templateliste die Typen der Parameter als Fusion-Sequenz
+übergeben.
+
+  boost::sql::mysql::statement<boost::fusion::vector<int, std::string> > stmt;
+
+Der Initialisierung des Objektes `stmt` muss die Datenbankverbindung und die
+SQL-Zeichenkette übergeben werden. Die Anzahl der Platzhalter in
+SQL-Zeichenkette muss mit der Länge der Fusion-Sequenz übereinstimmen.
+
+  boost::sql::mysql::statement<boost::fusion::vector<int, std::string> >
+    stmt(db, "INSERT INTO employees (name, salary) VALUES (?, ?)");
+
+Diese Anweisung kann nun wie eine Funktion aufgerufen werden. Vor dem ersten
+Aufruf wird die Anweisung vorbereitet. Stimmen Anzahl oder Typen der Parameter
+nicht überein, wird hierbei eine Exception geworfen. 
+
+  stmt("John Doe", 5000);
+
+In weiteren Versionen der Bibliothek soll ein zusätzlicher Template-Parameter
+für das Festlegen der Ergebnisliste unterstützt werden. Eine alternative Syntax,
+bei der die Signatur des Funktionsobjektes als Template-Paramter angegeben wird,
+wird die Benutzbarkeit weiter vereinfachen, indem die Fusion-Sequenzen hinter
+einer zusätzlichen Abstraktionsebene versteckt werden. Kenntnisse der Bibliothek
+Boost.Fusion werden dann keine Vorraussetzung zur Benutzung von Boost.SQL sein.
+
+[*Hinweis:] Leitet man eine eigene Klasse von der Verbindungsklasse ab und
+deklariert Statements als öffentliche Elemente, läßt sich objektorientierte
+Programmierung ermöglichen.
+
+[import ../example/oop.cpp]
+[foo]
+
+[section Template-Metaprogrammierung]
+Um die Parameter von Vorbereiteten Anweisungen der API des Datenbanksystems zu
+übergeben, müssen oft zusätzliche Variablen angelegt werden. Boost.SQL ermittelt
+die benötigten Variablen bereits zur Kompilierzeit.
+
+[*Beispiel:] Bei MySQL wird ein Array von `MYSQL_BIND` benötigt. Die Länge muss
+mit der Anzahl der Parameter übereinstimmen. Zeitwerte (DATE, TIME und DATETIME)
+werden über die Struktur `MYSQL_TIME` gebunden. Boost.SQL verwendet
+Template-Metaprogrammierung um zu ermittlen welche Variablen benötigt werden.
+
+Zunächst werden Metafunktionen definiert, um zu bestimmen, bei welchen Typen es
+sich um Zeitwerte handelt:
+
+ BOOST_TT_AUX_BOOL_TRAIT_DEF1(is_time,T,false)
+ BOOST_TT_AUX_BOOL_TRAIT_SPEC1(is_time,gregorian::date,true)
+ BOOST_TT_AUX_BOOL_TRAIT_SPEC1(is_time,posix_time::time_duration,true)
+ BOOST_TT_AUX_BOOL_TRAIT_SPEC1(is_time,posix_time::ptime,true)
+
+Über die folgende Metafunktion kann herausgefunden werden, ob ein Element in
+einer Sequenz vorhanden ist, für das eine Eigenschaft erfüllt ist. Wie die
+Funktion `std::find_if` gibt die Metafunktion `mpl::find_if` das Element am
+Ende, nach dem letzten Element zurück. Sind Ende und gefundenes Element nicht
+identisch, wurde ein Element gefunden.
+
+ template<typename Seq, typename Pred>
+ struct contains_if:
+   mpl::not_<
+     is_same<
+       typename mpl::find_if<Seq, Pred>::type,
+       typename mpl::end<Seq>::type
+     >
+   >
+ {
+ };
+
+Die folgenden Strukturen können als Basisklassen verwendet werden, um Arrays
+von `MYSQL_BIND` und `MYSQL_TIME` als Elemente zu erben.
+
+ template<std::size_t N>
+ struct mysql_bind
+ {
+   array<MYSQL_BIND, N> bind;
+ };
+
+ template<std::size_t N>
+ struct mysql_time
+ {
+   array<MYSQL_TIME, N> times;
+ };
+
+Die Superklasse von `parameters` wird nun wie folgt deklariert:
+
+* Ist die Fusion-Sequenz leer, wird von eine leeren Basis,
+* andernfalls von folgenden zwei Klassen abgeleitet:
+  # `mysql_bind` mit der Länge der Sequenz als Template-Parameter
+  # falls die Sequenz Zeitwerte enthält,
+    * `mysql_bind` mit der Anzahl der Zeitwerte als Template-Parameter
+    * andernfalls einer leeren Basis.
+
+Diese Vererbung wird als Metaprogramm realisiert:
+
+ template<typename Seq>
+ struct parameters:
+   if_<
+     empty<Seq>,
+     empty_base,
+     typename inherit<
+       mysql_bind<size<Seq>::value>,
+       typename if_<
+         contains_if<
+           Seq,
+           is_time<_>
+         >,
+         mysql_time<count_if<Seq, is_time<_> >::value>,
+         empty_base
+       >::type
+     >::type
+   >::type
+ {
+ };
+
+Größe und Existenz der Elemente `bind` und `times` sind nun abhängig von der
+Fusion-Sequenz, die als Template-Parameter der Deklaration eines
+`parameters`-Objektes übergeben wird.
+[endsect]
+[section Präprozessor-Metaprogrammierung]
+Die Elementfunktion `statement::execute()` übernimmt als einzigen Parameter eine
+Fusion-Sequenz von exakt dem Typ, mit dem das Objekt deklariert wurde.
+`statement::operator()()` soll nun genau soviele Argumente übernehmen, wie in
+der Sequenz angegeben sind. Dies lässt sich in C++0x mittels ["variadic
+templates] realisieren, in C++03 ist dies nicht ohne weiteres möglich.
+Der Typ der Argumente einer Funktion kann variabel sein, nicht aber die Anzahl.
+
+Als Umweg wird `operator()()` ohne, mit einem, mit zwei ... mit N Argumenten
+überladen und alle dieser Überladungen, deren Argumentanzahl nicht mit der
+Grösse der Fusion-Sequenz übereinstimmen nach dem SFINAE-Prinzip ungültig
+gemacht.
+
+Die Template-Klasse `executable`in ihrer nicht-spezialisierten Form, hat keine
+Elementfunktion.
+
+ template<typename Impl, typename Seq, typename Enable = void>
+ struct executable
+ {
+ };
+
+Eine Spezialisierung von `executable` stellt `operator()()` als Elementfunktion
+zur Verfügung, der die Funktion `statement::execute()` aufruft, wobei eine leere
+Fusion-Sequenz übergeben wird. Diese Spezialisierung ist nur gültig, wenn die
+Sequenz leer sein soll.
+
+ template<typename Impl, typename Seq>
+ struct executable<Impl, Seq,
+   typename enable_if<typename mpl::empty<Seq>::type>::type>
+ {
+   void operator()()
+   {
+     static_cast<Impl*> (this)->execute(Seq());
+   }
+ };
+
+Anstatt alle weitere Spezialisierungen manuell zu programmieren, was sehr
+fehleranfällig wäre, werden diese durch den Präprozessor erstellt. Es wird eine
+Spezialisierung von `executable` programmiert, die `operator()()` mit N
+Argumenten zur Verfügung stellt. Es wird eine Sequenz mit N Elementen
+initialisiert und der Funktion `statement::execute()` übergeben. Diese
+Spezialisierung ist gültig, wenn die Sequenz genau N lang ist.
+
+ template<typename Impl, typename Seq>
+ struct executable<Impl, Seq,
+   typename enable_if<typename is_same<
+     typename mpl::size<Seq>::type,
+     mpl::int_<N>::type>::type>::type>
+  {
+   template<BOOST_PP_ENUM_PARAMS(N, typename T)>
+   void operator()(BOOST_PP_ENUM_BINARY_PARAMS(N, T, arg))
+   {
+     static_cast<Impl*> (this)->execute(Seq(BOOST_PP_ENUM_PARAMS(N, arg)));
+   }
+  };
+
+Der Pfad der Datei und der Bereich der Überladungen wird festgelegt und
+anschliessend die Datei rekursiv includiert.
+
+ #define BOOST_PP_FILENAME_1 <boost/sql/detail/executable.hpp>
+ #define BOOST_PP_ITERATION_LIMITS (1, FUSION_MAX_VECTOR_SIZE)
+ #include BOOST_PP_ITERATE()
+
+Nun kann N definiert werden als die Nummer der Iteration.
+
+ #define N BOOST_PP_ITERATION()
+
+Durch die rekursive Iteration der Datei <boost/sql/detail/executable.hpp> werden
+soviele Spezialisierungen der Klasse `executable` erzeugt, wie die Konstante
+FUSION_MAX_VECTOR_SIZE angibt. Diese Konstante kann nach belieben definiert
+werden, falls die vorgegebene Größe von 30 nicht ausreicht.
+[endsect]
+[endsect]
+
+[section:async Asynchrone Funktionen]
+Die meisten Funktionen in Boost.SQL existieren in dreifacher Ausführung:
+
+  ret foo(arg p);
+  
+  ret foo(arg p, system::error_code& ec);
+  
+  template<typename Handler>
+  void async_foo(arg p, Handler handler);
+
+Die ersten beiden Funktionen sind für synchrone Programmierung geeignet.
+Der Aufruf wird blockiert, bis die Anfrage an den Datenbankserver
+beantwortet ist und das Ergebnis wird als Rückgabewert übergeben.
+
+Der Unterschied der beiden Funktionen ist die Fehlerbehandlung.
+Die erste Funktion wirft eine Ausnahme vom Typ
+`boost::system::system_error`, der von `std::exception` abgeleitet ist
+wenn die Anfrage fehlschlägt. Ist die Verwendung von Exceptions nicht
+erwünscht, bietet die zweite Funktion eine Alternative: Hier wird ein
+`boost::system::error_code` als Referenz übergeben und im Falle eines
+Fehlers gesetzt.
+
+[caution
+ Es sollte nach jedem Funkionsaufruf geprüft werden, ob der Fehlercode gesetzt
+ wurde!
+]
+
+Die asynchrone Funktion übernimmt als letztes Argument ein Funktionsobjekt,
+das aufgerufen wird, sobald die Arbeit ausgeführt wurde. Die Bibliothek
+garantiert, dass der Callback-Handler in dem Thread aufgerufen wird, der
+die Funktion `io_service::run()` aufruft.
+
+Fehlercode und Ergebnis der Abfrage können als Argumente an den Handler
+gebunden werden, wie im folgenden Beispiel gezeigt:
+
+  struct foobar
+  {
+    foobar(param)
+    {
+      async_foo(param, boost::bind(&foobar::callback, this,
+        placeholder::result, placeholder::error));
+    }
+    
+    void callback(ret result, system::error_code ec)
+    {
+      if (ec)
+      {
+        std::cout << ec << std::endl;
+        return;
+      }
+      /* hier wird result verwendet */
+    }
+  };
+
+[section Asynchrone Funktionen in mehreren Threads]
+Die asynchrone Funktionalität von Boost.SQL baut auf die Bibliotheken Boost.Asio
+und Boost.Thread auf. Da die C-API der meisten Datenbanksysteme keine
+Unterstützung für asynchrone Funktionen bieten, wird ein privates
+`asio::io_service`-Objekt angelegt, und ein Thread gestartet, der die Funktion
+`asio::io_service::run()` aufruft.
+
+ boost::asio::io_service ios;
+ boost::thread thread(boost::bind(&boost::asio::io_service::run, &ios));
+
+Bei MySQL müssen in jedem Thread globale Variablen erzeugt werden, was über den
+Aufruf von `mysql_thread_init()` passiert. Es wird daher eine eigene Klasse
+geschieben, anstatt die Funktion `asio::io_service::run()` über `boost::bind()`
+zu binden:
+
+ class mysql_io_service_runner
+ {
+ public:
+   mysql_io_service_runner(boost::asio::io_service& io_service):
+     io_service_(io_service)
+   {
+   }
+
+   void operator()()
+   {
+     mysql_thread_init();
+     io_service_.run();
+     mysql_thread_end();
+   }
+
+ private:
+   boost::asio::io_service& io_service_;
+ };
+
+Diese Klasse wird der Initialisierung des Threads übergeben:
+
+ boost::asio::io_service ios;
+ boost::thread thread(mysql_io_service_runner(ios));
+
+Die asynchrone Funktion bindet die entsprechende synchrone Funktion und die
+Parameter an ein Funktionsobjekt und übergibt dies an den `io_service`. Durch
+den Aufruf von `io_service::run()` in einem anderen Thread, wird die gebundene
+Funktion in diesem Thread aufgerufen. Anschliessend wird das Resultat als
+Argument an den Callback-Handler gebunden und über den öffentlichen `io_service`
+zum Aufruf im Hauptthread übergeben.
+[endsect]
+[section Asynchrone Funktionen in nur einem Thread]
+PostgreSQL bietet die Möglichkeit der asynchronen Programmierung ohne die
+Resourcen mehrerer Threads zu benötigen.
+
+Der Aufruf der Funktion `PQsendQueryPrepared()` beispielsweise wartet nicht, bis
+das Ergebnis der Anfrage angekommen ist, sondern springt sofort zurück. Mittels
+der Funktion `PQsocket()` kann der Netzwerk-Socket ermittelt werden. Durch
+Funktionen des Betriebssystem kann geprüft werden, ob Daten an diesem Socket
+anliegen. Boost.Asio bietet hierfür eine portable und vor allen Dingen
+asynchrone Lösung.
+
+Ein Socket-Objekt der Asio Bibliothek wird mit dem Socket der
+PostgreSQL-Verbindung initialisiert:
+
+ boost::asio::ip::tcp::socket socket(PQsocket(conn));
+
+Der Bibliothek Asio wird mitgeteilt, dass die Funktion `read_handler` aufgerufen
+werden soll, sobald am Netzwerk-Socket Daten zum Lesen bereitstehen. Hierfür
+wird ein Null-Puffer verwendet, damit Asio die Daten nicht direkt liest:
+
+ socket.async_read_some(null_buffers(), read_handler);
+
+Die Funktion `read_handler` lässt PostgreSQL die anliegenden Daten konsumieren
+und prüft anschliessend, ob die Daten komplett sind. Sind sie komplett, wird
+der Aufruf des Callback-Handlers initiiert, andernfalls wird asynchron auf
+weitere Daten gewartet.
+
+ void read_handler(system::error_code ec)
+ {
+   if (ec)
+     ois.post(Callback, ec);
+
+   if(!PQconsumeInput(conn))
+     ois.post(Callback, error);
+
+   if(!PQisBusy(conn))
+   {
+     PGresult * res = PQgetResult(conn);
+     ois.post(Callback, result(res));
+   }
+
+   socket.async_read_some(null_buffers(), read_handler);
+ }
+
+[endsect]
+[endsect]
+
+[xinclude sql_autodoc.xml]
+
+[section:outlook Ausblick]
+In diesem Projekt wurde die Realisierbarkeit einer Datenbankbibliothek
+demonstriert, die
+
+* die Programmiersschnittstellen der [link sql.concept [*sechs]] populärsten
+  [link sql.concept [*Datenbanksysteme abstrahiert]],
+* über [*Funktionsobjekte] schnell und einfach zu verwenden ist und
+* [*asynchrone Funktionen] für skalierende Systeme bereitstellt, ohne auf
+  mehrere Threads angewiesen zu sein.
+
+Die nächsten Schritte werden sein, die Implementierung zu vervollständigen,
+ausgiebig zu testen und sie für die Aufnahme in die Boost-Bibliotheken
+vorzuschlagen.
+
+Das Projekt ist auf [@http://trac.assembla.com/async-db] zu finden.
+[endsect]
+
