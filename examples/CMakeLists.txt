@@ -4,44 +4,44 @@
 # Distributed under the Boost Software License, Version 1.0. #
 ##############################################################
 
-find_package(Firebird)
 if(FIREBIRD_FOUND)
   include_directories(${Firebird_INCLUDE_DIRS})
-  boost_test_run(firebird
-    LINK_LIBS ${Firebird_LIBRARIES} ${Boost_SYSTEM_LIBRARY})
+  add_executable(example-firebird firebird.cpp)
+  target_link_libraries(example-firebird
+    ${Firebird_LIBRARIES} ${Boost_SYSTEM_LIBRARY})
 endif(FIREBIRD_FOUND)
 
-find_package(MySQL)
 if(MYSQL_FOUND)
   include_directories(${MYSQL_INCLUDE_DIR})
-  boost_test_run(mysql
-    LINK_LIBS ${MYSQL_LIBRARIES} ${Boost_SYSTEM_LIBRARY})
+  add_executable(example-mysql mysql.cpp)
+  target_link_libraries(example-mysql
+    ${MYSQL_LIBRARIES} ${Boost_SYSTEM_LIBRARY})
 endif(MYSQL_FOUND)
 
-find_package(ODBC)
 if(ODBC_FOUND)
   include_directories(${ODBC_INCLUDE_DIRS})
-  boost_test_run(odbc
-    LINK_LIBS ${ODBC_LIBRARIES} ${Boost_SYSTEM_LIBRARY})
+  add_executable(example-odbc odbc.cpp)
+  target_link_libraries(example-odbc
+    ${ODBC_LIBRARIES} ${Boost_SYSTEM_LIBRARY})
 endif(ODBC_FOUND)
 
-find_package(ORACLE)
 if(ORACLE_FOUND)
   include_directories(${ORACLE_INCLUDE_DIRS})
-  boost_test_run(oracle
-    LINK_LIBS ${ORACLE_LIBRARIES} ${Boost_SYSTEM_LIBRARY})
+  add_executable(example-oracle oracle.cpp)
+  target_link_libraries(example-oracle
+    ${ORACLE_LIBRARIES} ${Boost_SYSTEM_LIBRARY})
 endif(ORACLE_FOUND)
 
-find_package(PostgreSQL)
 if(POSTGRESQL_FOUND)
   include_directories(${PostgreSQL_INCLUDE_DIRS})
-  boost_test_run(postgres
-    LINK_LIBS ${PostgreSQL_LIBRARIES} ${Boost_SYSTEM_LIBRARY})
+  add_executable(example-postgres postgres.cpp)
+  target_link_libraries(example-postgres
+    ${PostgreSQL_LIBRARIES} ${Boost_SYSTEM_LIBRARY})
 endif(POSTGRESQL_FOUND)
 
-find_package(SQLite3)
 if(SQLITE3_FOUND)
   include_directories(${SQLITE3_INCLUDE_DIRS})
-  boost_test_run(sqlite3
-    LINK_LIBS ${SQLITE3_LIBRARIES} ${Boost_SYSTEM_LIBRARY})
+  add_executable(example-sqlite3 sqlite3.cpp)
+  target_link_libraries(example-sqlite3
+    ${SQLITE3_LIBRARIES} ${Boost_SYSTEM_LIBRARY})
 endif(SQLITE3_FOUND)
