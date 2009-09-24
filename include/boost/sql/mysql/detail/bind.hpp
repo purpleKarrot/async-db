@@ -3,6 +3,7 @@
  *                                                            *
  * Distributed under the Boost Software License, Version 1.0. *
  **************************************************************/
+
 #ifndef BOOST_SQL_DETAIL_MYSQL_BIND_HPP
 #define BOOST_SQL_DETAIL_MYSQL_BIND_HPP
 
@@ -29,8 +30,7 @@ struct bind_param
 
 	static void call(MYSQL_BIND& b, const std::string& value)
 	{
-		b.buffer
-				= const_cast<void*> (reinterpret_cast<const void*> (value.c_str()));
+		b.buffer = const_cast<void*> (reinterpret_cast<const void*> (value.c_str()));
 		*b.length = value.length();
 	}
 
@@ -44,7 +44,7 @@ struct bind_param
 
 	static void call(MYSQL_BIND& b, const gregorian::date& value)
 	{
-		MYSQL_TIME * time = reinterpret_cast<MYSQL_TIME*> (b.buffer);
+		MYSQL_TIME* time = reinterpret_cast<MYSQL_TIME*> (b.buffer);
 		time->year = value.year();
 		time->month = value.month();
 		time->day = value.day();
@@ -58,7 +58,7 @@ struct bind_param
 
 	static void call(MYSQL_BIND& b, const posix_time::time_duration& value)
 	{
-		MYSQL_TIME * time = reinterpret_cast<MYSQL_TIME*> (b.buffer);
+		MYSQL_TIME* time = reinterpret_cast<MYSQL_TIME*> (b.buffer);
 		time->year = 0;
 		time->month = 0;
 		time->day = 0;
@@ -75,7 +75,7 @@ struct bind_param
 		//call(b, value.date());
 		//call(b, value.time_of_day());
 
-		MYSQL_TIME * time = reinterpret_cast<MYSQL_TIME*> (b.buffer);
+		MYSQL_TIME* time = reinterpret_cast<MYSQL_TIME*> (b.buffer);
 		time->year = value.date().year();
 		time->month = value.date().month();
 		time->day = value.date().day();

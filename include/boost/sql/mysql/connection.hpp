@@ -18,7 +18,7 @@ namespace sql
 namespace mysql
 {
 
-class connection: sql::detail::connection_base<detail::service>
+class connection: public sql::detail::connection_base<detail::service>
 {
 public:
 	connection(asio::io_service& io_service) :

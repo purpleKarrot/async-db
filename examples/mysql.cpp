@@ -15,14 +15,16 @@
 namespace db = boost::sql::mysql;
 
 typedef boost::fusion::tuple<int, std::string, int> employee;
+typedef boost::fusion::tuple<> nil;
 
 struct Employees: db::connection
 {
 	Employees(boost::asio::io_service& io_service) :
-		db::connection(io_service),
-		insert(*this, "INSERT INTO employee (id, name, salary) VALUES (?, ?, ?)"),
-		count(*this, "SELECT count(*) FROM employee"),
-		select(*this, "SELECT * FROM employee WHERE id=?")
+				db::connection(io_service), //
+				insert(*this,
+						"INSERT INTO employee (id, name, salary) VALUES (?, ?, ?)"), //
+				count(*this, "SELECT count(*) FROM employee"), //
+				select(*this, "SELECT * FROM employee WHERE id=?")
 	{
 		open("testdb", "root", "password");
 
@@ -35,6 +37,16 @@ struct Employees: db::connection
 	db::executable<employee(int)> select;
 };
 
+void drop_handler(boost::system::error_code& error)
+{
+	std::cout << "drop_handler: " << error.message() << std::endl;
+}
+
+void create_handler(boost::system::error_code& error)
+{
+	std::cout << "create_handler: " << error.message() << std::endl;
+}
+
 int main()
 {
 	try
@@ -42,10 +54,15 @@ int main()
 		boost::asio::io_service ios;
 		Employees empl(ios);
 
-		empl.execute("DROP TABLE employee");
+		db::statement<nil, nil> drop(empl, "DROP TABLE employee");
+		drop.async_execute(nil(), drop_handler);
 
-		empl.execute("CREATE TABLE employee"
+		db::statement<nil, nil> create(empl, "CREATE TABLE employee"
 			" ( id INT, name CHAR(20), salary INT, PRIMARY KEY (id) )");
+		create.async_execute(nil(), create_handler);
+
+		ios.run();
+		ios.reset();
 
 		empl.execute("INSERT INTO employee (id, name, salary) "
 			"VALUES (1001, 'Thad Beaumont', 44000)");
@@ -53,8 +70,14 @@ int main()
 		empl.insert(1002, "Horst", 712);
 		empl.insert(1003, "Alfred", 7132);
 
-//		std::cout << empl.count() << std::endl;
+		std::cout << empl.count() << std::endl;
 		std::cout << empl.select(1002) << std::endl;
+
+		db::statement<nil, employee> get_all(empl, "SELECT * FROM employee");
+		get_all.execute(nil());
+		employee e;
+		while (get_all.fetch(e))
+			std::cout << e << std::endl;
 
 	} catch (std::exception& e)
 	{

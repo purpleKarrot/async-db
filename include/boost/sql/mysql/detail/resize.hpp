@@ -3,6 +3,7 @@
  *                                                            *
  * Distributed under the Boost Software License, Version 1.0. *
  **************************************************************/
+
 #ifndef BOOST_SQL_DETAIL_MYSQL_RESIZE_HPP
 #define BOOST_SQL_DETAIL_MYSQL_RESIZE_HPP
 
@@ -27,9 +28,9 @@ struct resize_param
 	}
 
 	template<typename T>
-	static void call(MYSQL_BIND& bind, optional<T>& dummy)
+	static void call(MYSQL_BIND& bind, optional<T>& value)
 	{
-		call(bind, *dummy);
+		call(bind, *value);
 	}
 
 	static void call(MYSQL_BIND& bind, std::string& value)

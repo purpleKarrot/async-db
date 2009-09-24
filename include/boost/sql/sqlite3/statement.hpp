@@ -9,8 +9,11 @@
 #include <boost/sql/sqlite3/connection.hpp>
 #include <boost/sql/sqlite3/detail/bind_params.hpp>
 #include <boost/sql/sqlite3/detail/bind_result.hpp>
+#include <boost/sql/sqlite3/detail/error.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/sql/detail/executable.hpp>
+#include <boost/sql/detail/handler.hpp>
+#include <boost/bind.hpp>
 #include <iostream>
 #include <string>
 
@@ -41,36 +44,79 @@ public:
 		sqlite3_finalize(stmt);
 	}
 
+	std::string error_message() const
+	{
+		return sqlite3_errmsg(conn.implementation());
+	}
+
+	void prepare(boost::system::error_code& error)
+	{
+		error.assign(sqlite3_prepare_v2(conn.implementation(),
+				query_str.c_str(), query_str.size(), &stmt, 0),
+				get_error_category());
+
+		if (!error)
+		{
+			BOOST_ASSERT(sqlite3_bind_parameter_count(stmt) == param_count);
+			BOOST_ASSERT(sqlite3_column_count(stmt) == result_count);
+
+			prepared = true;
+		}
+	}
+
 	void prepare()
 	{
-		if (sqlite3_prepare_v2(conn.implementation(), query_str.c_str(),
-				query_str.size(), &stmt, 0) != SQLITE_OK)
+		boost::system::error_code error;
+		prepare(error);
+		if (error)
+			throw std::runtime_error(error_message());
+	}
+
+	template<typename Handler>
+	void async_prepare(Handler handler)
+	{
+		post(boost::bind(statement::prepare, this, _1), handler);
+	}
+
+	void execute(const Param& params, boost::system::error_code& error)
+	{
+		if (!prepared)
 		{
-			throw std::runtime_error(sqlite3_errmsg(conn.implementation()));
+			prepare(error);
+			if (error)
+				return;
 		}
 
-		BOOST_ASSERT(sqlite3_bind_parameter_count(stmt) == param_count);
-		BOOST_ASSERT(sqlite3_column_count(stmt) == result_count);
+		error.assign(sqlite3_reset(stmt), get_error_category());
+		if (error)
+			return;
 
-		prepared = true;
+		error.assign(detail::bind_params(stmt, params), get_error_category());
+		if (error)
+			return;
+
+		typedef int(*step_or_reset_function)(sqlite3_stmt*);
+		step_or_reset_function step_or_reset = //
+				sqlite3_column_count(stmt) ? sqlite3_reset : sqlite3_step;
+		error.assign(step_or_reset(stmt), get_error_category());
+
+		if (error.value() == SQLITE_DONE)
+			error = boost::system::error_code();
 	}
 
 	void execute(const Param& params)
 	{
-		if (!prepared)
-			prepare();
+		boost::system::error_code error;
+		execute(params, error);
 
-		if (sqlite3_reset(stmt) != SQLITE_OK)
-			throw std::runtime_error(sqlite3_errmsg(conn.implementation()));
+		if (error)
+			throw std::runtime_error(error_message());
+	}
 
-		if (detail::bind_params(stmt, params))
-			throw std::runtime_error(sqlite3_errmsg(conn.implementation()));
-
-		int (*fn)(sqlite3_stmt*) = sqlite3_column_count(stmt) ?
-		sqlite3_reset : sqlite3_step;
-		int rc = fn(stmt);
-		if (rc != SQLITE_DONE && rc != SQLITE_OK)
-			throw std::runtime_error(sqlite3_errmsg(conn.implementation()));
+	template<typename Handler>
+	void async_execute(const Param& params, Handler handler)
+	{
+		post(boost::bind(&statement::execute, this, params, _1), handler);
 	}
 
 	bool fetch(Result& result)
@@ -89,10 +135,24 @@ public:
 			sqlite3_reset(stmt);
 		}
 
-		throw std::runtime_error(sqlite3_errmsg(conn.implementation()));
+		throw std::runtime_error(error_message());
 	}
 
+	// template<typename Handler>
+	// void async_fetch(Result& result, Handler handler)
+	// {
+	//     post(boost::bind(statement::prepare, this, _1), handler);
+	// }
+
 private:
+
+	template<typename Function, typename Callback>
+	void post(Function function, Callback callback)
+	{
+		conn.get_io_service().post(sql::detail::handler<Function, Callback>(
+				conn.get_io_service(), function, callback));
+	}
+
 	sqlite3_stmt* stmt;
 	connection& conn;
 	std::string query_str;

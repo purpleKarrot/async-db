@@ -3,6 +3,7 @@
  *                                                            *
  * Distributed under the Boost Software License, Version 1.0. *
  **************************************************************/
+
 #ifndef BOOST_SQL_DETAIL_MYSQL_PREPARE_HPP
 #define BOOST_SQL_DETAIL_MYSQL_PREPARE_HPP
 
@@ -28,14 +29,14 @@ struct prepare
 	{
 		bind.buffer_type = field_type<T>::value;
 		bind.buffer_length = sizeof(T);
-		bind.is_unsigned = is_unsigned<T>::value;
+		bind.is_unsigned = boost::is_unsigned<T>::value;
 	}
 
 	template<typename T>
-	static void call(MYSQL_BIND& bind, const optional<T>& dummy)
+	static void call(MYSQL_BIND& bind, const optional<T>& value)
 	{
 		bind.is_null = new my_bool;
-		call(bind, *dummy);
+		call(bind, *value);
 	}
 
 	static void call(MYSQL_BIND& bind, const std::string&)
@@ -44,19 +45,19 @@ struct prepare
 		bind.length = new unsigned long;
 	}
 
-	static void call(MYSQL_BIND& bind, const gregorian::date&)
+	static void call(MYSQL_BIND& bind, const boost::gregorian::date&)
 	{
 		bind.buffer_type = MYSQL_TYPE_DATE;
 		bind.buffer = new MYSQL_TIME;
 	}
 
-	static void call(MYSQL_BIND& bind, const posix_time::time_duration&)
+	static void call(MYSQL_BIND& bind, const boost::posix_time::time_duration&)
 	{
 		bind.buffer_type = MYSQL_TYPE_TIME;
 		bind.buffer = new MYSQL_TIME;
 	}
 
-	static void call(MYSQL_BIND& bind, const posix_time::ptime&)
+	static void call(MYSQL_BIND& bind, const boost::posix_time::ptime&)
 	{
 		bind.buffer_type = MYSQL_TYPE_DATETIME;
 		bind.buffer = new MYSQL_TIME;
