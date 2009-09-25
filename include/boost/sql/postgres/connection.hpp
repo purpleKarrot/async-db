@@ -12,6 +12,7 @@
 #include <boost/sql/detail/connection_base.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/bind.hpp>
 #include <stdexcept>
 #include <pg_config.h>
 
@@ -70,6 +71,29 @@ public:
 	}
 
 private:
+
+	void read_handler(const system::error_code& ec)
+	{
+		if (ec)
+		{
+			//ois.post(Callback, ec);
+		}
+
+		if (!PQconsumeInput(impl))
+		{
+			//ois.post(Callback, error);
+		}
+
+		if (!PQisBusy(impl))
+		{
+			PGresult * res = PQgetResult(impl);
+			//ois.post(Callback, result(res));
+		}
+
+		socket.async_read_some(boost::asio::null_buffers(), //
+				boost::bind(&connection::read_handler, this, _1));
+	}
+
 	PGconn* impl;
 	asio::ip::tcp::socket socket;
 };

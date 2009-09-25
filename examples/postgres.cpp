@@ -12,12 +12,17 @@
 
 namespace db = boost::sql::postgres;
 
+typedef boost::fusion::tuple<int, std::string, int> employee;
+typedef boost::fusion::tuple<> nil;
+
 struct Employees: db::connection
 {
 	Employees(boost::asio::io_service& ios) :
-		db::connection(ios),
-		insert(*this, "INSERT INTO employee (id, name, salary)"
-			" VALUES ($1, $2, $3)")
+		db::connection(ios), //
+				insert(*this, "INSERT INTO employee (id, name, salary)"
+					" VALUES ($1, $2, $3)"), //
+				count(*this, "SELECT count(*) FROM employee"), //
+				select(*this, "SELECT * FROM employee WHERE id=$1")
 	{
 		open("dbname=foo user=postgres password=postgres");
 
@@ -26,6 +31,8 @@ struct Employees: db::connection
 	}
 
 	db::executable<void(int, std::string, int)> insert;
+	db::executable<int()> count;
+	db::executable<employee(int)> select;
 };
 
 int main()
@@ -45,6 +52,15 @@ int main()
 
 		empl.insert(1002, "Horst", 712);
 		empl.insert(1003, "Alfred", 7132);
+
+		std::cout << empl.count() << std::endl;
+		std::cout << empl.select(1002) << std::endl;
+
+		db::statement<nil, employee> get_all(empl, "SELECT * FROM employee");
+		get_all.execute(nil());
+		employee e;
+		while (get_all.fetch(e))
+			std::cout << e << std::endl;
 
 	} catch (std::exception& e)
 	{

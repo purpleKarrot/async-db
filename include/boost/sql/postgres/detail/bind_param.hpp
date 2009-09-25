@@ -3,6 +3,7 @@
  *                                                            *
  * Distributed under the Boost Software License, Version 1.0. *
  **************************************************************/
+
 #ifndef BOOST_SQL_POSTGRES_BIND_PARAM_HPP
 #define BOOST_SQL_POSTGRES_BIND_PARAM_HPP
 
@@ -60,6 +61,5 @@ private:
 } // end namespace postgres
 } // end namespace sql
 } // end namespace boost
-
 
 #endif /*BOOST_SQL_POSTGRES_BIND_PARAM_HPP*/
