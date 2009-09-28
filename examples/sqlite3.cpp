@@ -18,10 +18,10 @@ typedef boost::fusion::tuple<> nil;
 struct Employees: db::connection
 {
 	Employees(boost::asio::io_service& ios) :
-		db::connection(ios), insert(*this,
-				"INSERT INTO employee (id, name, salary) VALUES (?, ?, ?)"),
-				count(*this, "SELECT count(*) FROM employee"), select(*this,
-						"SELECT * FROM employee WHERE id=?")
+		db::connection(ios),
+		insert(*this, "INSERT INTO employee (id, name, salary) VALUES (?, ?, ?)"),
+		count(*this, "SELECT count(*) FROM employee"),
+		select(*this, "SELECT * FROM employee WHERE id=?")
 	{
 		open("sqlite3.db");
 

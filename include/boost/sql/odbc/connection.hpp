@@ -21,7 +21,8 @@ class connection: sql::detail::connection_base<detail::service>
 {
 public:
 	connection(asio::io_service& io_service) :
-		sql::detail::connection_base<detail::service>(io_service)
+		sql::detail::connection_base<detail::service>(io_service), is_open_(
+				false)
 	{
 		if (!SQL_SUCCEEDED(SQLAllocHandle(SQL_HANDLE_DBC, service.environment,
 						&impl)))
@@ -37,26 +38,36 @@ public:
 
 	void open(const std::string& conn_str)
 	{
-		SQLTCHAR conn_out[SQL_MAX_OPTION_STRING_LENGTH];
+		SQLCHAR conn_out[SQL_MAX_OPTION_STRING_LENGTH];
 		SQLSMALLINT cb;
 
-		if (!SQL_SUCCEEDED(SQLDriverConnect(impl, NULL,
-						(SQLCHAR*) conn_str.c_str(),
-						conn_str.length(), conn_out, sizeof(conn_out), &cb,
+		if (!SQL_SUCCEEDED(SQLDriverConnect(impl, NULL, (SQLCHAR*) conn_str.c_str(),
+						conn_str.length(), conn_out, SQL_MAX_OPTION_STRING_LENGTH, &cb,
 						SQL_DRIVER_NOPROMPT)))
 		{
 			detail::throw_error(SQL_HANDLE_DBC, impl);
 		}
 	}
 
+	bool is_open() const
+	{
+		return is_open_;
+	}
+
 	unsigned long client_version()
 	{
-		return 0;
+		return ODBCVER;
 	}
 
 	unsigned long server_version()
 	{
-		return 0;
+		SQLSMALLINT length;
+		SQLCHAR version[16];
+
+		SQLGetInfo(impl, SQL_DRIVER_ODBC_VER, version, sizeof(version), &length);
+
+		return int(version[0] - '0') << 12 | int(version[1] - '0') << 8
+				| int(version[3] - '0') << 4 | int(version[4] - '0') << 0;
 	}
 
 	void execute(const std::string& query)
@@ -70,6 +81,7 @@ public:
 
 private:
 	HDBC impl;
+	bool is_open_;
 };
 
 } // end namespace odbc

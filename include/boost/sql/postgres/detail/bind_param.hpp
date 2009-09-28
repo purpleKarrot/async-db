@@ -47,6 +47,7 @@ public:
 	template<typename T>
 	void operator()(const T& value) const
 	{
+		//TODO: value needs to be in network byte order!
 		*value_++ = (char*) (buffer(value));
 		*length_++ = buffer_length(value);
 		*format_++ = traits<T>::format;

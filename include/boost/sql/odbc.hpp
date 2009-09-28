@@ -9,5 +9,6 @@
 
 #include <boost/sql/odbc/connection.hpp>
 #include <boost/sql/odbc/statement.hpp>
+#include <boost/sql/odbc/executable.hpp>
 
 #endif /*BOOST_SQL_ODBC_HPP*/

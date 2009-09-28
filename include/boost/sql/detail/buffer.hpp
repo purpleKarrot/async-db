@@ -15,17 +15,17 @@ namespace sql
 {
 
 template<typename T>
-const void * buffer(T& value)
+const void* buffer(T& value)
 {
 	return &value;
 }
 
-const void * buffer(const std::string& str)
+const void* buffer(const std::string& str)
 {
 	return str.c_str();
 }
 
-const void * buffer(const char* str)
+const void* buffer(const char* str)
 {
 	return str;
 }
