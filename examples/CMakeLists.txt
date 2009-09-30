@@ -15,7 +15,7 @@ if(MYSQL_FOUND)
   include_directories(${MYSQL_INCLUDE_DIR})
   add_executable(example-mysql mysql.cpp)
   target_link_libraries(example-mysql
-    ${MYSQL_LIBRARIES} ${Boost_SYSTEM_LIBRARY})
+    ${MYSQL_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_DATE_TIME_LIBRARY})
 endif(MYSQL_FOUND)
 
 if(ODBC_FOUND)

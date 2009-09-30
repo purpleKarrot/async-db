@@ -4,8 +4,8 @@
  * Distributed under the Boost Software License, Version 1.0. *
  **************************************************************/
 
-#ifndef BOOST_SQL_DETAIL_MYSQL_BIND_HPP
-#define BOOST_SQL_DETAIL_MYSQL_BIND_HPP
+#ifndef BOOST_SQL_MYSQL_DETAIL_BIND_PARAM_HPP
+#define BOOST_SQL_MYSQL_DETAIL_BIND_PARAM_HPP
 
 #include <boost/date_time/gregorian/gregorian_types.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
@@ -31,7 +31,7 @@ struct bind_param
 	static void call(MYSQL_BIND& b, const std::string& value)
 	{
 		b.buffer = const_cast<void*> (reinterpret_cast<const void*> (value.c_str()));
-		*b.length = value.length();
+		*b.length = b.buffer_length = value.length();
 	}
 
 	template<typename T>
@@ -72,9 +72,6 @@ struct bind_param
 
 	static void call(MYSQL_BIND& b, const posix_time::ptime& value)
 	{
-		//call(b, value.date());
-		//call(b, value.time_of_day());
-
 		MYSQL_TIME* time = reinterpret_cast<MYSQL_TIME*> (b.buffer);
 		time->year = value.date().year();
 		time->month = value.date().month();
@@ -93,4 +90,4 @@ struct bind_param
 } // end namespace sql
 } // end namespace boost
 
-#endif /* BOOST_SQL_DETAIL_MYSQL_BIND_HPP */
+#endif /* BOOST_SQL_MYSQL_DETAIL_BIND_PARAM_HPP */

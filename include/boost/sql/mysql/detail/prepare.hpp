@@ -36,7 +36,7 @@ struct prepare
 	static void call(MYSQL_BIND& bind, const optional<T>& value)
 	{
 		bind.is_null = new my_bool;
-		call(bind, *value);
+		call(bind, T());
 	}
 
 	static void call(MYSQL_BIND& bind, const std::string&)

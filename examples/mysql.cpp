@@ -4,27 +4,28 @@
  * Distributed under the Boost Software License, Version 1.0. *
  **************************************************************/
 
-#include "employee.hpp"
+#include "user.hpp"
 
 #include <iostream>
 #include <exception>
 #include <boost/asio.hpp>
 #include <boost/sql/mysql.hpp>
 #include <boost/fusion/tuple.hpp>
+#include <boost/date_time/gregorian/gregorian.hpp>
 
 namespace db = boost::sql::mysql;
 
-typedef boost::fusion::tuple<int, std::string, int> employee;
+//typedef boost::fusion::tuple<int, boost::optional<std::string>, boost::gregorian::date> employee;
+typedef boost::fusion::tuple<int, std::string, boost::gregorian::date> employee;
 typedef boost::fusion::tuple<> nil;
 
 struct Employees: db::connection
 {
 	Employees(boost::asio::io_service& io_service) :
-				db::connection(io_service), //
-				insert(*this,
-						"INSERT INTO employee (id, name, salary) VALUES (?, ?, ?)"), //
-				count(*this, "SELECT count(*) FROM employee"), //
-				select(*this, "SELECT * FROM employee WHERE id=?")
+		db::connection(io_service),
+		insert(*this, "INSERT INTO employee (id, name, birthday) VALUES (?, ?, ?)"),
+		count(*this, "SELECT count(*) FROM employee"),
+		select(*this, "SELECT * FROM employee WHERE id=?")
 	{
 		open("testdb", "root", "password");
 
@@ -32,7 +33,7 @@ struct Employees: db::connection
 		std::cout << "server version: " << server_version() << std::endl;
 	}
 
-	db::executable<void(int, std::string, int)> insert;
+	db::executable<void(int, std::string, boost::gregorian::date)> insert;
 	db::executable<int()> count;
 	db::executable<employee(int)> select;
 };
@@ -58,17 +59,17 @@ int main()
 		drop.async_execute(nil(), drop_handler);
 
 		db::statement<nil, nil> create(empl, "CREATE TABLE employee"
-			" ( id INT, name CHAR(20), salary INT, PRIMARY KEY (id) )");
+			" ( id INT, name CHAR(20), birthday DATE, PRIMARY KEY (id) )");
 		create.async_execute(nil(), create_handler);
 
 		ios.run();
 		ios.reset();
 
-		empl.execute("INSERT INTO employee (id, name, salary) "
-			"VALUES (1001, 'Thad Beaumont', 44000)");
+		empl.execute("INSERT INTO employee (id, name, birthday) "
+			"VALUES (1001, 'Thad Beaumont', NOW())");
 
-		empl.insert(1002, "Horst", 712);
-		empl.insert(1003, "Alfred", 7132);
+		empl.insert(1002, "Horst", boost::gregorian::from_string("2002/1/25"));
+		empl.insert(1003, "Alfred", boost::gregorian::day_clock::local_day());
 
 		std::cout << empl.count() << std::endl;
 		std::cout << empl.select(1002) << std::endl;
@@ -77,10 +78,10 @@ int main()
 		get_all.execute(nil());
 		employee e;
 		while (get_all.fetch(e))
-			std::cout << e << std::endl;
-
-	} catch (std::exception& e)
+ 			std::cout << e << std::endl;
+	}
+	catch (std::exception& e)
 	{
-		std::cout << e.what() << std::endl;
+		std::cout << "exception: " << e.what() << std::endl;
 	}
 }

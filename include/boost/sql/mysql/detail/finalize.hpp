@@ -28,10 +28,10 @@ struct finalize
 	}
 
 	template<typename T>
-	static void call(MYSQL_BIND& bind, const optional<T>& dummy)
+	static void call(MYSQL_BIND& bind, const optional<T>& value)
 	{
 		delete bind.is_null;
-		call(bind, *dummy);
+		call(bind, *value);
 	}
 
 	static void call(MYSQL_BIND& bind, const std::string&)

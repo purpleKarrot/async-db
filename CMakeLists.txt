@@ -13,7 +13,7 @@ add_definitions(-DBOOST_NO_SCOPED_ENUMS)
 add_definitions(-DBOOST_NO_DEFAULTED_FUNCTIONS)
 
 find_package(Boost 1.37.0 REQUIRED
-  COMPONENTS filesystem system program_options)
+  COMPONENTS filesystem system program_options date_time)
 
 ##############################################################
 
