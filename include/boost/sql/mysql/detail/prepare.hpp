@@ -33,7 +33,7 @@ struct prepare
 	}
 
 	template<typename T>
-	static void call(MYSQL_BIND& bind, const optional<T>& value)
+	static void call(MYSQL_BIND& bind, const optional<T>&)
 	{
 		bind.is_null = new my_bool;
 		call(bind, T());

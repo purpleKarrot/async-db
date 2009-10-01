@@ -120,20 +120,12 @@ public:
 		if (error == MYSQL_DATA_TRUNCATED)
 		{
 			result_binding.resize(results);
-			result_binding.bind_result(results);
-
 			if (mysql_stmt_bind_result(impl, result_binding.impl))
 				throw_error("mysql_stmt_bind_result");
 
 			mysql_stmt_row_seek(impl, offset);
 			error = mysql_stmt_fetch(impl);
 		}
-
-//		if (error = 101)
-//		{
-//			std::cout << result_binding.impl[1].buffer_length << std::endl;
-//			std::cout << *result_binding.impl[1].length << std::endl;
-//		}
 
 		if (!error)
 		{
