@@ -36,6 +36,12 @@ boost_add_documentation(sql.qbk
     SORT_BY_SCOPE_NAME=YES
   )
 
+configure_file(boostbook.css
+  ${CMAKE_CURRENT_BINARY_DIR}/html/boostbook.css COPYONLY)
+
+configure_file(exploits_of_a_mom.png
+  ${CMAKE_CURRENT_BINARY_DIR}/html/exploits_of_a_mom.png COPYONLY)
+
 install(FILES
     boostbook.css
     exploits_of_a_mom.png

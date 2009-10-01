@@ -1,10 +1,8 @@
 /**************************************************************
- * Copyright (c) 2008 Daniel Pfeifer                          *
+ * Copyright (c) 2008-2009 Daniel Pfeifer                     *
  *                                                            *
  * Distributed under the Boost Software License, Version 1.0. *
  **************************************************************/
-
-#include "user.hpp"
 
 #include <iostream>
 #include <exception>
@@ -15,17 +13,16 @@
 
 namespace db = boost::sql::mysql;
 
-//typedef boost::fusion::tuple<int, boost::optional<std::string>, boost::gregorian::date> employee;
-typedef boost::fusion::tuple<int, std::string, boost::gregorian::date> employee;
+typedef boost::fusion::tuple<int, std::string, boost::gregorian::date> user;
 typedef boost::fusion::tuple<> nil;
 
-struct Employees: db::connection
+struct Users: db::connection
 {
-	Employees(boost::asio::io_service& io_service) :
+	Users(boost::asio::io_service& io_service) :
 		db::connection(io_service),
-		insert(*this, "INSERT INTO employee (id, name, birthday) VALUES (?, ?, ?)"),
-		count(*this, "SELECT count(*) FROM employee"),
-		select(*this, "SELECT * FROM employee WHERE id=?")
+		insert(*this, "INSERT INTO users (id, name, registered) VALUES (?, ?, ?)"),
+		count(*this, "SELECT count(*) FROM users"),
+		select(*this, "SELECT * FROM users WHERE id=?")
 	{
 		open("testdb", "root", "password");
 
@@ -35,7 +32,7 @@ struct Employees: db::connection
 
 	db::executable<void(int, std::string, boost::gregorian::date)> insert;
 	db::executable<int()> count;
-	db::executable<employee(int)> select;
+	db::executable<user(int)> select;
 };
 
 void drop_handler(boost::system::error_code& error)
@@ -52,33 +49,34 @@ int main()
 {
 	try
 	{
-		boost::asio::io_service ios;
-		Employees empl(ios);
+		boost::asio::io_service io_service;
+		Users users(io_service);
 
-		db::statement<nil, nil> drop(empl, "DROP TABLE employee");
+		db::statement<nil, nil> drop(users, "DROP TABLE users");
+		db::statement<nil, nil> create(users, "CREATE TABLE users ( "
+			"id INT NOT NULL, name CHAR(20) NOT NULL, registered DATE,"
+			"PRIMARY KEY (id) )");
+
 		drop.async_execute(nil(), drop_handler);
-
-		db::statement<nil, nil> create(empl, "CREATE TABLE employee"
-			" ( id INT, name CHAR(20), birthday DATE, PRIMARY KEY (id) )");
 		create.async_execute(nil(), create_handler);
 
-		ios.run();
-		ios.reset();
+		io_service.run();
 
-		empl.execute("INSERT INTO employee (id, name, birthday) "
-			"VALUES (1001, 'Thad Beaumont', NOW())");
+		users.execute("INSERT INTO users (id, name, registered) "
+			"VALUES (1001, 'John', NOW())");
 
-		empl.insert(1002, "Horst", boost::gregorian::from_string("2002/1/25"));
-		empl.insert(1003, "Alfred", boost::gregorian::day_clock::local_day());
+		users.insert(1002, "Carl", boost::gregorian::from_string("2002/1/25"));
+		users.insert(1003, "Bob", boost::gregorian::day_clock::local_day());
 
-		std::cout << empl.count() << std::endl;
-		std::cout << empl.select(1002) << std::endl;
+		std::cout << "\nNumber of users: " << users.count() << std::endl;
+		std::cout << "User with id=1002: " << users.select(1002) << std::endl;
 
-		db::statement<nil, employee> get_all(empl, "SELECT * FROM employee");
+		std::cout << "\nAll users:" << std::endl;
+		db::statement<nil, user> get_all(users, "SELECT * FROM users");
 		get_all.execute(nil());
-		employee e;
-		while (get_all.fetch(e))
- 			std::cout << e << std::endl;
+		user u;
+		while (get_all.fetch(u))
+			std::cout << u << std::endl;
 	}
 	catch (std::exception& e)
 	{
