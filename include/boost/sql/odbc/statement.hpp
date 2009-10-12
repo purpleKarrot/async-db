@@ -76,10 +76,6 @@ public:
 
 	bool fetch(Result& result)
 	{
-		SQLCHAR SalesPerson[11];
-		SQLUINTEGER CustID;
-		SQLINTEGER SalesPersonLenOrInd, CustIDInd;
-
 		SQLINTEGER indicators[result_count];
 		fusion::for_each(result, detail::bind_result(impl, indicators));
 

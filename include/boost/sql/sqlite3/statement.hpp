@@ -55,13 +55,13 @@ public:
 				query_str.c_str(), query_str.size(), &stmt, 0),
 				get_error_category());
 
-		if (!error)
-		{
-			BOOST_ASSERT(sqlite3_bind_parameter_count(stmt) == param_count);
-			BOOST_ASSERT(sqlite3_column_count(stmt) == result_count);
+		if (error)
+			return;
 
-			prepared = true;
-		}
+		BOOST_ASSERT(sqlite3_bind_parameter_count(stmt) == param_count);
+		BOOST_ASSERT(sqlite3_column_count(stmt) == result_count);
+
+		prepared = true;
 	}
 
 	void prepare()

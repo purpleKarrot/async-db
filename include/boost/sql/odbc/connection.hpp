@@ -62,7 +62,7 @@ public:
 	unsigned long server_version()
 	{
 		SQLSMALLINT length;
-		SQLCHAR version[16];
+		SQLCHAR version[6];
 
 		SQLGetInfo(impl, SQL_DRIVER_ODBC_VER, version, sizeof(version), &length);
 

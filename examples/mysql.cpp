@@ -14,6 +14,7 @@
 namespace db = boost::sql::mysql;
 
 typedef boost::fusion::tuple<int, std::string, boost::gregorian::date> user;
+
 typedef boost::fusion::tuple<> nil;
 
 struct Users: db::connection
