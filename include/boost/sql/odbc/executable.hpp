@@ -4,10 +4,10 @@
  * Distributed under the Boost Software License, Version 1.0. *
  **************************************************************/
 
-#ifndef BOOST_SQL_POSTGRES_EXECUTABLE_HPP
-#define BOOST_SQL_POSTGRES_EXECUTABLE_HPP
+#ifndef BOOST_SQL_ODBC_EXECUTABLE_HPP
+#define BOOST_SQL_ODBC_EXECUTABLE_HPP
 
-#include <boost/sql/postgres/statement.hpp>
+#include <boost/sql/odbc/statement.hpp>
 #include <boost/sql/detail/executable.hpp>
 
 namespace boost
@@ -32,4 +32,4 @@ struct executable: sql::detail::executable<connection, statement, Signature>
 } // end namespace sql
 } // end namespace boost
 
-#endif /* BOOST_SQL_POSTGRES_EXECUTABLE_HPP */
+#endif /* BOOST_SQL_ODBC_EXECUTABLE_HPP */

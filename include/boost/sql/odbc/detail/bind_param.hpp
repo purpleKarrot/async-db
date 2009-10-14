@@ -10,6 +10,8 @@
 #include <sql.h>
 #include <boost/sql/odbc/detail/traits.hpp>
 #include <boost/sql/odbc/detail/throw_error.hpp>
+#include <boost/sql/detail/buffer.hpp>
+#include <boost/sql/detail/buffer_length.hpp>
 
 namespace boost
 {
