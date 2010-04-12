@@ -1,10 +1,10 @@
 ##############################################################
-# Copyright (c) 2008-2009 Daniel Pfeifer                     #
+# Copyright (c) 2008-2010 Daniel Pfeifer                     #
 #                                                            #
 # Distributed under the Boost Software License, Version 1.0. #
 ##############################################################
 
-cmake_minimum_required(VERSION 2.6.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 2.8.0 FATAL_ERROR)
 project(async-db)
 
 set(CMAKE_BUILD_TYPE "Debug")
@@ -12,27 +12,16 @@ set(CMAKE_BUILD_TYPE "Debug")
 add_definitions(-DBOOST_NO_SCOPED_ENUMS)
 add_definitions(-DBOOST_NO_DEFAULTED_FUNCTIONS)
 
-find_package(Boost 1.37.0 REQUIRED
+find_package(Boost 1.40.0 REQUIRED
   COMPONENTS filesystem system program_options date_time)
 
 ##############################################################
 
-set(BUILD_QUICKBOOK "ON")
-add_executable(quickbook
-  ${CMAKE_SOURCE_DIR}/tools/quickbook/detail/quickbook.cpp
-  ${CMAKE_SOURCE_DIR}/tools/quickbook/detail/actions.cpp
-  ${CMAKE_SOURCE_DIR}/tools/quickbook/detail/actions_class.cpp
-  ${CMAKE_SOURCE_DIR}/tools/quickbook/detail/utils.cpp
-  ${CMAKE_SOURCE_DIR}/tools/quickbook/detail/post_process.cpp
-  ${CMAKE_SOURCE_DIR}/tools/quickbook/detail/collector.cpp
-  ${CMAKE_SOURCE_DIR}/tools/quickbook/detail/template_stack.cpp
-  )
-target_link_libraries(quickbook ${Boost_LIBRARIES})
-
-include(tools/BoostDocs.cmake)
-include(tools/BoostUtils.cmake)
-
-##############################################################
+set(CTOOLBOX_USE_FILE ${CMAKE_BINARY_DIR}/UseCToolBox.cmake)
+file(DOWNLOAD
+  http://github.com/purpleKarrot/CToolBox/raw/master/UseCToolBox.cmake
+  ${CTOOLBOX_USE_FILE})
+include(${CTOOLBOX_USE_FILE})
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMake)
 find_package(Firebird)
@@ -47,5 +36,12 @@ include_directories(
   ${Boost_INCLUDE_DIRS}
   )
 
-add_subdirectory(doc)
+option(SQL_BUILD_DOCUMENTATION OFF)
+if(SQL_BUILD_DOCUMENTATION)
+  set(THIS_PROJECT_NAME async-db)
+  include(AddReference)
+  include(AddDocumentation)
+  add_subdirectory(doc)
+endif(SQL_BUILD_DOCUMENTATION)
+
 add_subdirectory(examples)
