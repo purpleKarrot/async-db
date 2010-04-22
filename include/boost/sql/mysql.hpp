@@ -9,6 +9,5 @@
 
 #include <boost/sql/mysql/connection.hpp>
 #include <boost/sql/mysql/statement.hpp>
-#include <boost/sql/mysql/executable.hpp>
 
 #endif /*BOOST_SQL_MYSQL_HPP*/

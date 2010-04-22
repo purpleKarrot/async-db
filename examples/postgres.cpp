@@ -18,21 +18,22 @@ typedef boost::fusion::tuple<> nil;
 struct Employees: db::connection
 {
 	Employees(boost::asio::io_service& ios) :
-		db::connection(ios), //
-				insert(*this, "INSERT INTO employee (id, name, salary)"
-					" VALUES ($1, $2, $3)"), //
-				count(*this, "SELECT count(*) FROM employee"), //
-				select(*this, "SELECT * FROM employee WHERE id=$1")
+		db::connection(ios)
 	{
 		open("dbname=foo user=postgres password=postgres");
+
+		insert = prepare<void(int, std::string, int)> (
+				"INSERT INTO employee (id, name, salary) VALUES ($1, $2, $3)");
+		count = prepare<int()> ("SELECT count(*) FROM employee");
+		select = prepare<employee(int)> ("SELECT * FROM employee WHERE id=$1");
 
 		std::cout << "client version: " << client_version() << std::endl;
 		std::cout << "server version: " << server_version() << std::endl;
 	}
 
-	db::executable<void(int, std::string, int)> insert;
-	db::executable<int()> count;
-	db::executable<employee(int)> select;
+	boost::function<void(int, std::string, int)> insert;
+	boost::function<int()> count;
+	boost::function<employee(int)> select;
 };
 
 int main()

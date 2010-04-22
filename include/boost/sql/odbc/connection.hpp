@@ -9,6 +9,8 @@
 
 #include <boost/sql/odbc/detail/service.hpp>
 #include <boost/sql/detail/connection_base.hpp>
+#include <boost/sql/detail/callable.hpp>
+#include <boost/function.hpp>
 
 namespace boost
 {
@@ -16,6 +18,9 @@ namespace sql
 {
 namespace odbc
 {
+
+template<typename Param, typename Result>
+class statement;
 
 class connection: sql::detail::connection_base<detail::service>
 {
@@ -72,6 +77,13 @@ public:
 
 	void execute(const std::string& query)
 	{
+	}
+
+	template<typename Signature>
+	boost::function<Signature> prepare(std::string const& query)
+	{
+		return sql::detail::callable<connection, statement, Signature>(*this,
+				query);
 	}
 
 	HDBC implementation()

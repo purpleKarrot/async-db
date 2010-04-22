@@ -13,6 +13,8 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/bind.hpp>
+#include <boost/sql/detail/callable.hpp>
+#include <boost/function.hpp>
 #include <stdexcept>
 #include <pg_config.h>
 
@@ -22,6 +24,9 @@ namespace sql
 {
 namespace postgres
 {
+
+template<typename Param, typename Result>
+class statement;
 
 class connection: sql::detail::connection_base<detail::service>
 {
@@ -63,6 +68,13 @@ public:
 		{
 			throw std::runtime_error(PQresultErrorMessage(res.get()));
 		}
+	}
+
+	template<typename Signature>
+	boost::function<Signature> prepare(std::string const& query)
+	{
+		return sql::detail::callable<connection, statement, Signature>(*this,
+				query);
 	}
 
 	PGconn* implementation() const

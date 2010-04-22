@@ -9,6 +9,8 @@
 
 #include <boost/sql/mysql/detail/service.hpp>
 #include <boost/sql/detail/connection_base.hpp>
+#include <boost/sql/detail/callable.hpp>
+#include <boost/function.hpp>
 #include <string>
 
 namespace boost
@@ -17,6 +19,9 @@ namespace sql
 {
 namespace mysql
 {
+
+template<typename Param, typename Result>
+class statement;
 
 class connection: public sql::detail::connection_base<detail::service>
 {
@@ -59,6 +64,13 @@ public:
 	{
 		if (mysql_real_query(impl, query.c_str(), query.length()))
 			throw std::runtime_error(mysql_error(impl));
+	}
+
+	template<typename Signature>
+	boost::function<Signature> prepare(std::string const& query)
+	{
+		return sql::detail::callable<connection, statement, Signature>(*this,
+				query);
 	}
 
 	MYSQL* implementation()

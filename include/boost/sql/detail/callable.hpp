@@ -1,11 +1,11 @@
 /**************************************************************
- * Copyright (c) 2008-2009 Daniel Pfeifer                     *
+ * Copyright (c) 2008-2010 Daniel Pfeifer                     *
  *                                                            *
  * Distributed under the Boost Software License, Version 1.0. *
  **************************************************************/
 
-#ifndef BOOST_SQL_DETAIL_EXECUTABLE_HPP
-#define BOOST_SQL_DETAIL_EXECUTABLE_HPP
+#ifndef BOOST_SQL_DETAIL_CALLABLE_HPP
+#define BOOST_SQL_DETAIL_CALLABLE_HPP
 
 #include <boost/preprocessor/iteration/iterate.hpp>
 #include <boost/preprocessor/repetition/enum_params.hpp>
@@ -16,6 +16,7 @@
 #include <boost/utility/enable_if.hpp>
 #include <boost/type_traits/is_void.hpp>
 #include <string>
+#include <boost/shared_ptr.hpp>
 
 namespace boost
 {
@@ -44,9 +45,9 @@ struct make_result<R, R>
 
 template<typename Connection, template<typename , typename > class Statement,
 		typename Signature, typename Enable = void>
-struct executable;
+struct callable;
 
-#define BOOST_PP_FILENAME_1 <boost/sql/detail/executable_pp.hpp>
+#define BOOST_PP_FILENAME_1 <boost/sql/detail/callable_pp.hpp>
 #define BOOST_PP_ITERATION_LIMITS (0, FUSION_MAX_VECTOR_SIZE)
 #include BOOST_PP_ITERATE()
 
@@ -54,4 +55,4 @@ struct executable;
 } // end namespace sql
 } // end namespace boost
 
-#endif /* BOOST_SQL_DETAIL_EXECUTABLE_V2_HPP */
+#endif /* BOOST_SQL_DETAIL_CALLABLE_HPP */

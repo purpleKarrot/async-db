@@ -14,6 +14,7 @@
 #include <boost/fusion/include/mpl.hpp>
 #include <boost/mpl/size.hpp>
 #include <boost/bind.hpp>
+#include <boost/noncopyable.hpp>
 
 namespace boost
 {
@@ -23,7 +24,7 @@ namespace mysql
 {
 
 template<typename Param, typename Result>
-class statement
+class statement: private boost::noncopyable
 {
 	enum
 	{

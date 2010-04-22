@@ -11,6 +11,8 @@
 #include <boost/fusion/tuple.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
 
+#include <boost/function.hpp>
+
 namespace db = boost::sql::mysql;
 
 typedef boost::fusion::tuple<int, std::string, boost::gregorian::date> user;
@@ -20,20 +22,22 @@ typedef boost::fusion::tuple<> nil;
 struct Users: db::connection
 {
 	Users(boost::asio::io_service& io_service) :
-		db::connection(io_service),
-		insert(*this, "INSERT INTO users (id, name, registered) VALUES (?, ?, ?)"),
-		count(*this, "SELECT count(*) FROM users"),
-		select(*this, "SELECT * FROM users WHERE id=?")
+		db::connection(io_service)
 	{
 		open("testdb", "root", "password");
+
+		insert = prepare<void(int, std::string, boost::gregorian::date)> (
+				"INSERT INTO users (id, name, registered) VALUES (?, ?, ?)");
+		count = prepare<int()>("SELECT count(*) FROM users");
+		select = prepare<user(int)> ("SELECT * FROM users WHERE id=?");
 
 		std::cout << "client version: " << client_version() << std::endl;
 		std::cout << "server version: " << server_version() << std::endl;
 	}
 
-	db::executable<void(int, std::string, boost::gregorian::date)> insert;
-	db::executable<int()> count;
-	db::executable<user(int)> select;
+	boost::function<void(int, std::string, boost::gregorian::date)> insert;
+	boost::function<int()> count;
+	boost::function<user(int)> select;
 };
 
 void drop_handler(boost::system::error_code& error)

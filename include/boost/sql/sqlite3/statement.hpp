@@ -11,7 +11,7 @@
 #include <boost/sql/sqlite3/detail/bind_result.hpp>
 #include <boost/sql/sqlite3/detail/error.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/sql/detail/executable.hpp>
+#include <boost/sql/detail/callable.hpp>
 #include <boost/sql/detail/handler.hpp>
 #include <boost/bind.hpp>
 #include <iostream>

@@ -8,6 +8,5 @@
 
 #include <boost/sql/postgres/connection.hpp>
 #include <boost/sql/postgres/statement.hpp>
-#include <boost/sql/postgres/executable.hpp>
 
 #endif /*BOOST_SQL_POSTGRES_HPP*/

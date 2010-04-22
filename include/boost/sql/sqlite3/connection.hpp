@@ -9,6 +9,8 @@
 
 #include <boost/sql/sqlite3/detail/service.hpp>
 #include <boost/sql/detail/connection_base.hpp>
+#include <boost/sql/detail/callable.hpp>
+#include <boost/function.hpp>
 #include <stdexcept>
 #include <exception>
 
@@ -18,6 +20,9 @@ namespace sql
 {
 namespace sqlite3
 {
+
+template<typename Param, typename Result>
+class statement;
 
 class connection: public sql::detail::connection_base<detail::service>
 {
@@ -51,7 +56,17 @@ public:
 		return sqlite3_libversion_number();
 	}
 
-	void execute(const std::string& cmd);
+	template<typename Signature>
+	boost::function<Signature> prepare(std::string const& query)
+	{
+		return sql::detail::callable<connection, statement, Signature>(*this,
+				query);
+	}
+
+	void execute(const std::string& cmd)
+	{
+		prepare<void()>(cmd)();
+	}
 
 	::sqlite3* implementation() const
 	{
@@ -61,25 +76,6 @@ public:
 private:
 	::sqlite3* impl;
 };
-
-} // end namespace sqlite3
-} // end namespace sql
-} // end namespace boost
-
-#include <boost/sql/sqlite3/executable.hpp>
-
-namespace boost
-{
-namespace sql
-{
-namespace sqlite3
-{
-
-void connection::execute(const std::string& cmd)
-{
-	executable<void()> stmt(*this, cmd);
-	stmt();
-}
 
 } // end namespace sqlite3
 } // end namespace sql

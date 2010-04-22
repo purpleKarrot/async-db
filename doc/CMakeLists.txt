@@ -28,6 +28,8 @@ add_reference(sql-ref.xml
 
   ../include/boost/sql/sqlite3/connection.hpp
   ../include/boost/sql/sqlite3/statement.hpp
+  
+  HEADER_PREFIX boost
   )
 
 add_documentation(
